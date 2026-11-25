@@ -205,6 +205,46 @@ test.describe("mobilecli", () => {
 		});
 	});
 
+	test.describe("crashesGet", () => {
+		test("passes the crash id after -- so a leading dash is data", () => {
+			const mobilecli = new Mobilecli();
+			const calls: string[][] = [];
+			const payload = JSON.stringify({
+				status: "ok",
+				data: { content: "trace", id: "--help" },
+			});
+			mobilecli.executeCommandBuffer = function(args: string[]): Buffer {
+				calls.push(args);
+				return Buffer.from(payload);
+			};
+
+			const response = mobilecli.crashesGet("device-1", "--help");
+
+			expect(calls).toEqual([["device", "crashes", "get", "--device", "device-1", "--", "--help"]]);
+			expect(response.data).toEqual({ content: "trace", id: "--help" });
+		});
+
+		test("looks up a flag-like id instead of treating it as a mobilecli flag", () => {
+			const mobilecli = new Mobilecli();
+			const deviceId = "mobile-mcp-missing-device";
+			for (const id of ["--help", "--insecure-storage", "someid"]) {
+				let thrown: unknown;
+				try {
+					mobilecli.crashesGet(deviceId, id);
+				} catch (error) {
+					thrown = error;
+				}
+
+				expect(thrown, id).toBeInstanceOf(Error);
+				expect(thrown, id).not.toBeInstanceOf(SyntaxError);
+				const message = thrown instanceof Error ? thrown.message : String(thrown);
+				expect(message, id).toContain(`device not found: ${deviceId}`);
+				expect(message, id).not.toContain("Get a crash report");
+				expect(message, id).not.toContain("accepts 1 arg");
+			}
+		});
+	});
+
 	test.describe("agentStatus", () => {
 		test("should return fail status when agent is not installed and mobilecli exits non-zero", () => {
 			const mobilecli = new Mobilecli();

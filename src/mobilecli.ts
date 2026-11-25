@@ -245,7 +245,9 @@ export class Mobilecli {
 	}
 
 	crashesGet(deviceId: string, id: string): MobilecliCrashGetResponse {
-		const output = this.executeCommandBuffer(["device", "crashes", "get", id, "--device", deviceId]);
+		// "--" keeps a caller-supplied id from being parsed as a mobilecli flag.
+		// "--device" has to come first; anything after "--" is the crash id.
+		const output = this.executeCommandBuffer(["device", "crashes", "get", "--device", deviceId, "--", id]);
 		return JSON.parse(output.toString().trim()) as MobilecliCrashGetResponse;
 	}
 
